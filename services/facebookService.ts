@@ -164,11 +164,63 @@ export const getFacebookPages = (userId: string): Promise<any[]> => {
   });
 };
 
+// Helper to convert data URI to Blob
+const dataURItoBlob = (dataURI: string) => {
+  const byteString = atob(dataURI.split(',')[1]);
+  const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], {type: mimeString});
+};
+
 /**
- * Publish text content to a specific page
+ * Publish content to a specific page.
+ * Supports Image (Photos endpoint) or Text-only (Feed endpoint).
  */
-export const publishToFacebookPage = (pageId: string, pageAccessToken: string, message: string): Promise<any> => {
+export const publishToFacebookPage = async (pageId: string, pageAccessToken: string, message: string, imageUrl?: string): Promise<any> => {
   return new Promise((resolve, reject) => {
+    
+    // 1. Handle Image Post (Photos Endpoint)
+    // We use raw fetch here because handling Blobs via the JS SDK .api() method can be inconsistent across versions/environments
+    if (imageUrl && imageUrl.startsWith('data:')) {
+      try {
+        const blob = dataURItoBlob(imageUrl);
+        const formData = new FormData();
+        formData.append('access_token', pageAccessToken);
+        formData.append('message', message);
+        formData.append('source', blob);
+        
+        fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                // If photo upload fails, we reject. The UI can decide to retry or fail.
+                reject(data.error || new Error("Failed to upload photo to Facebook."));
+            } else {
+                resolve(data);
+            }
+        })
+        .catch(err => reject(err));
+        
+        return;
+      } catch (e) {
+        console.warn("Failed to process image for upload, attempting text-only fallback:", e);
+        // Fall through to text only
+      }
+    }
+
+    // 2. Handle Text Post (Feed Endpoint)
+    if (!window.FB) {
+        reject("Facebook SDK not ready.");
+        return;
+    }
+
     window.FB.api(
       `/${pageId}/feed`,
       'POST',

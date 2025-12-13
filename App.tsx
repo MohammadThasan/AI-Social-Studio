@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import GeneratorForm from './components/GeneratorForm';
 import PostResult from './components/PostResult';
@@ -19,6 +19,20 @@ const App: React.FC = () => {
   const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Initialize theme from system preference or local storage could be added here
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -50,8 +64,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F0F4F8]">
-      <Header />
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? 'dark bg-slate-900' : 'bg-[#F0F4F8]'}`}>
+      <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
       
       <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
@@ -81,8 +95,8 @@ const App: React.FC = () => {
       </main>
 
       {/* Simple Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 text-sm">
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-auto transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 dark:text-slate-500 text-sm">
           <p>© {new Date().getFullYear()} InsightGen. AI responses can vary. Verify important information.</p>
         </div>
       </footer>
