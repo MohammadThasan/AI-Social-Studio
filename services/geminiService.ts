@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { FormData, GeneratedPost, GroundingSource, ImageStyle } from '../types';
 import { SYSTEM_INSTRUCTION } from '../constants';
@@ -43,30 +44,36 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
   }
 
   // We explicitly ask for a JSON object to separate the research from the content
-  // Note: We cannot use responseSchema with googleSearch, so we prompt for it.
   const prompt = `
-    TASK: Research and write a ${platform} post about "${topicToUse}".
+    TASK: Perform DEEP RESEARCH and write a viral, high-engagement ${platform} post about "${topicToUse}".
 
-    STEP 1: RESEARCH
-    Use Google Search to find the absolute latest (last 2 weeks) developments, research papers (arXiv), GitHub repos, or viral discussions related to "${topicToUse}".
-    Focus on: AI Engineering, Agentic Workflows, RAG optimizations, or Model Architecture.
-    Filter out generic marketing fluff. Find the "meat".
+    STEP 1: 🕵️ DEEP WEB SEARCH (MANDATORY)
+    Use Google Search to find 3 distinct types of information from the last 2 weeks:
+    1.  **Hard Data**: A specific benchmark, cost metric, latency number, or financial figure.
+    2.  **Industry News/Magazines**: A recent article from a major tech publication (Wired, Verge, TechCrunch) or a top engineering blog (OpenAI, Uber, Netflix).
+    3.  **Community Pulse**: A controversial opinion or debate currently happening in the AI community.
+    
+    *Constraint*: Do not just invent facts. Find real ones.
 
-    STEP 2: WRITE POST
-    Write the content following these rules:
-    - Platform: ${platform}
-    - Tone: ${data.tone} (See system instruction for strict style guide).
-    - Style: ${platformStyle}
-    - Constraints: ${platformConstraint}
-    - ${data.includePromptChaining ? 'Include a "Prompt Chain" example: A sequence of 2 linked prompts solving a specific task.' : ''}
-    - ${data.includeEmoji ? 'Use emojis naturally (not spammy).' : 'NO emojis.'}
+    STEP 2: 🧠 SYNTHESIS & ANGLE
+    Identify the "So What?". Why does this matter to a human engineer or business leader right now?
+    Select an angle: ${data.tone}.
 
-    STEP 3: FORMAT
-    You must return a valid JSON object. Do not include markdown formatting like \`\`\`json.
-    The JSON object must have these keys:
+    STEP 3: ✍️ WRITE POST (HUMAN-MODE)
+    -   **Hook**: Start with a "Pattern Interrupt" - a surprising fact, a contrarian statement, or a "Stop doing this" command.
+    -   **Body**: Deliver the insight found in Step 1. Be specific. Use numbers.
+    -   **Formatting**: Use line breaks, bullet points, and bold text to make it skimmable.
+    -   **Interactive Ending**: Ask a specific question based on the content to drive comments.
+    -   **Style**: ${platformStyle}
+    -   **Constraints**: ${platformConstraint}
+    -   ${data.includePromptChaining ? 'Include a "Prompt Chain" example: A sequence of 2 linked prompts solving a specific task.' : ''}
+    -   ${data.includeEmoji ? 'Use emojis naturally (not spammy).' : 'NO emojis.'}
+
+    STEP 4: 📦 FORMAT OUTPUT
+    Return a valid JSON object with these keys:
     {
-      "researchSummary": "A 1-2 sentence summary of the specific real-world event/paper/update found during research.",
-      "contentAngle": "The specific angle taken (e.g., 'Technical Deep Dive', 'Contrarian View', 'Business Utility').",
+      "researchSummary": "A concise summary of the specific papers, articles, or data points you found. Mention the source names.",
+      "contentAngle": "The specific angle taken (e.g., 'Cost Analysis', 'Architecture Deep Dive').",
       "postContent": "The actual social media post text, formatted with Markdown.",
       "hashtags": ["tag1", "tag2"]
     }
@@ -81,7 +88,7 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         tools: [{ googleSearch: {} }],
-        temperature: 0.7, 
+        temperature: 0.85, // Slightly higher for more creative/human phrasing
       },
     });
 
@@ -146,47 +153,60 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
   }
 };
 
-export const generatePostImage = async (data: FormData, style: ImageStyle = 'Minimalist'): Promise<string | undefined> => {
+export const generatePostImage = async (
+  data: FormData, 
+  style: ImageStyle = 'Minimalist',
+  manualAspectRatio?: string,
+  manualPrompt?: string
+): Promise<string | undefined> => {
   if (!apiKey) return undefined;
 
   const topicToUse = data.topic === 'Custom' ? data.customTopic : data.topic;
   
-  // Supported aspect ratios: "1:1", "3:4", "4:3", "9:16", "16:9"
-  let aspectRatio = "16:9"; 
-  
-  switch (data.platform) {
-    case 'Instagram':
-      // Square is ideal for Instagram feed/grid
-      aspectRatio = "1:1"; 
-      break;
-    case 'Facebook':
-      // 4:3 is a good balance for Facebook feed visibility (taller than 16:9)
-      aspectRatio = "4:3"; 
-      break;
-    case 'X (Twitter)':
-      // 16:9 is the standard preview size for Twitter cards
-      aspectRatio = "16:9"; 
-      break;
-    case 'Medium':
-      // 16:9 is standard for blog post headers
-      aspectRatio = "16:9"; 
-      break;
-    case 'LinkedIn':
-      // 16:9 is professional and works well with link previews, 
-      // though 1:1 is also common. We stick to 16:9 for the "Wider" look.
-      aspectRatio = "16:9"; 
-      break;
-    default:
-      aspectRatio = "16:9";
+  // Determine aspect ratio: Use manual if provided, otherwise default per platform
+  let aspectRatio = manualAspectRatio;
+  if (!aspectRatio) {
+    switch (data.platform) {
+        case 'Instagram':
+        aspectRatio = "1:1"; 
+        break;
+        case 'Facebook':
+        aspectRatio = "4:3"; 
+        break;
+        case 'X (Twitter)':
+        aspectRatio = "16:9"; 
+        break;
+        case 'Medium':
+        aspectRatio = "16:9"; 
+        break;
+        case 'LinkedIn':
+        aspectRatio = "16:9"; 
+        break;
+        default:
+        aspectRatio = "16:9";
+    }
   }
 
-  const imagePrompt = `
-    Create a professional, modern, high-quality digital illustration suitable for a ${data.platform} post about: "${topicToUse}".
-    Style: ${style} art style. 
-    Mood: ${data.tone}. 
-    Aspect Ratio: ${aspectRatio}. 
-    Important: Do not include any text or words inside the image.
-  `;
+  // Construct Prompt
+  let imagePrompt = '';
+  
+  if (manualPrompt && manualPrompt.trim().length > 0) {
+      imagePrompt = `
+        Create a digital illustration based on this description: "${manualPrompt}".
+        Style: ${style} art style.
+        Mood: ${data.tone}.
+        Aspect Ratio: ${aspectRatio}.
+        Important: Do not include any text or words inside the image.
+      `;
+  } else {
+      imagePrompt = `
+        Create a professional, modern, high-quality digital illustration suitable for a ${data.platform} post about: "${topicToUse}".
+        Style: ${style} art style. 
+        Mood: ${data.tone}. 
+        Aspect Ratio: ${aspectRatio}. 
+        Important: Do not include any text or words inside the image.
+      `;
+  }
 
   try {
     const response = await ai.models.generateContent({

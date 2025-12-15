@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GeneratedPost, FormData, ImageStyle, Platform, FacebookPage, FacebookUser } from '../types';
 import { generatePostImage } from '../services/geminiService';
@@ -5,9 +6,10 @@ import { initFacebookSdk, loginToFacebook, getFacebookUser, getFacebookPages, pu
 import ReactMarkdown from 'react-markdown';
 import { 
   Copy, Check, Share2, ExternalLink, Globe, Linkedin, Facebook, Download, 
-  RefreshCw, Palette, Twitter, Instagram, Smartphone, Loader2, LogIn, 
+  RefreshCw, Palette, Twitter, Instagram, Loader2, LogIn, 
   ChevronDown, Settings, BookOpen, Sparkles, Zap, MonitorPlay,
-  User, ThumbsUp, MessageSquare, Repeat, Send, Bookmark, MoreHorizontal, Heart, AlertCircle
+  User, ThumbsUp, MessageSquare, Repeat, Send, MoreHorizontal, AlertCircle,
+  RectangleHorizontal, RectangleVertical, Square, Sliders, Type, Search
 } from 'lucide-react';
 
 interface PostResultProps {
@@ -27,6 +29,11 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
   const [selectedStyle, setSelectedStyle] = useState<ImageStyle>('Minimalist');
   const [shareMessage, setShareMessage] = useState<string | null>(null);
 
+  // Image Generation Settings
+  const [aspectRatio, setAspectRatio] = useState<string>('16:9');
+  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [showImageSettings, setShowImageSettings] = useState(false);
+
   // Facebook Specific State
   const [fbUser, setFbUser] = useState<FacebookUser | null>(null);
   const [fbPages, setFbPages] = useState<FacebookPage[]>([]);
@@ -40,6 +47,15 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
   // App ID Management
   const [needsAppId, setNeedsAppId] = useState(false);
   const [customAppId, setCustomAppId] = useState('');
+
+  // Sync default Aspect Ratio with Platform
+  useEffect(() => {
+    switch (formData.platform) {
+      case 'Instagram': setAspectRatio('1:1'); break;
+      case 'Facebook': setAspectRatio('4:3'); break;
+      default: setAspectRatio('16:9'); break;
+    }
+  }, [formData.platform]);
 
   // Auto-connect logic
   useEffect(() => {
@@ -77,7 +93,12 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
                 
                 const pages = await getFacebookPages(user.id);
                 setFbPages(pages);
-                if (pages.length > 0) setSelectedFbPage(pages[0]);
+                
+                // Restore selected page from localStorage or default to first
+                const storedPageId = localStorage.getItem('fb_selected_page_id');
+                const targetPage = pages.find(p => p.id === storedPageId) || (pages.length > 0 ? pages[0] : null);
+                if (targetPage) setSelectedFbPage(targetPage);
+                
                 setIsConnectingFb(false);
             } catch (e) {
                 console.log("User not currently logged in to FB");
@@ -129,8 +150,12 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
       
       const pages = await getFacebookPages(user.id);
       setFbPages(pages);
-      if (pages.length > 0) {
-        setSelectedFbPage(pages[0]);
+      
+      // Restore selected page from localStorage or default to first
+      const storedPageId = localStorage.getItem('fb_selected_page_id');
+      const targetPage = pages.find(p => p.id === storedPageId) || (pages.length > 0 ? pages[0] : null);
+      if (targetPage) {
+        setSelectedFbPage(targetPage);
       }
     } catch (err: any) {
       console.error(err);
@@ -224,7 +249,7 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
     if (!post || isRegeneratingImage) return;
     setIsRegeneratingImage(true);
     try {
-      const newImageUrl = await generatePostImage(formData, selectedStyle);
+      const newImageUrl = await generatePostImage(formData, selectedStyle, aspectRatio, customPrompt);
       if (newImageUrl) {
         onImageUpdate(newImageUrl);
       }
@@ -365,29 +390,109 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
             </div>
         </div>
 
-        {/* Style Controls */}
-        <div className="mt-2 flex items-center justify-between px-1">
-             <div className="flex items-center gap-2">
-                 <Palette className="w-3.5 h-3.5 text-slate-400" />
-                 <select 
-                    value={selectedStyle}
-                    onChange={(e) => setSelectedStyle(e.target.value as ImageStyle)}
-                    className="bg-transparent border-none text-xs text-slate-600 dark:text-slate-400 focus:ring-0 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 py-0 pl-0 pr-6 font-medium"
-                    disabled={isRegeneratingImage}
-                  >
-                    {IMAGE_STYLES.map(style => (
-                      <option key={style} value={style} className="dark:bg-slate-800">{style}</option>
-                    ))}
-                  </select>
+        {/* Style & Image Controls */}
+        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
+           
+           <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Image Settings</span>
+              <button 
+                onClick={() => setShowImageSettings(!showImageSettings)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              >
+                {showImageSettings ? 'Hide Options' : 'Customize'}
+                <Sliders className="w-3 h-3" />
+              </button>
+           </div>
+
+           <div className="flex flex-wrap items-end gap-3 justify-between">
+             <div className="flex items-center gap-4 flex-wrap">
+                 {/* Style Selector */}
+                 <div>
+                   <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Style</label>
+                   <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5">
+                      <Palette className="w-3.5 h-3.5 text-slate-400" />
+                      <select 
+                          value={selectedStyle}
+                          onChange={(e) => setSelectedStyle(e.target.value as ImageStyle)}
+                          className="bg-transparent border-none text-xs text-slate-700 dark:text-slate-300 focus:ring-0 cursor-pointer p-0 font-medium w-24"
+                          disabled={isRegeneratingImage}
+                        >
+                          {IMAGE_STYLES.map(style => (
+                            <option key={style} value={style} className="dark:bg-slate-800">{style}</option>
+                          ))}
+                        </select>
+                   </div>
+                 </div>
+
+                 {/* Aspect Ratio Buttons */}
+                 <div>
+                    <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Aspect Ratio</label>
+                    <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-0.5">
+                       <button 
+                         onClick={() => setAspectRatio('1:1')}
+                         className={`p-1.5 rounded ${aspectRatio === '1:1' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                         title="Square (1:1)"
+                       >
+                          <Square className="w-3.5 h-3.5" />
+                       </button>
+                       <button 
+                         onClick={() => setAspectRatio('4:3')}
+                         className={`p-1.5 rounded ${aspectRatio === '4:3' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                         title="Standard (4:3)"
+                       >
+                          <RectangleHorizontal className="w-3.5 h-3.5 scale-90" />
+                       </button>
+                       <button 
+                         onClick={() => setAspectRatio('16:9')}
+                         className={`p-1.5 rounded ${aspectRatio === '16:9' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                         title="Landscape (16:9)"
+                       >
+                          <RectangleHorizontal className="w-3.5 h-3.5" />
+                       </button>
+                       <button 
+                         onClick={() => setAspectRatio('3:4')}
+                         className={`p-1.5 rounded ${aspectRatio === '3:4' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                         title="Portrait Standard (3:4)"
+                       >
+                          <RectangleVertical className="w-3.5 h-3.5 scale-90" />
+                       </button>
+                        <button 
+                         onClick={() => setAspectRatio('9:16')}
+                         className={`p-1.5 rounded ${aspectRatio === '9:16' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                         title="Portrait Tall (9:16)"
+                       >
+                          <RectangleVertical className="w-3.5 h-3.5" />
+                       </button>
+                    </div>
+                 </div>
              </div>
+
              <button
                 onClick={handleRegenerateImage}
                 disabled={isRegeneratingImage}
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-medium disabled:opacity-50"
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
              >
                 <RefreshCw className={`w-3 h-3 ${isRegeneratingImage ? 'animate-spin' : ''}`} />
                 Regenerate
              </button>
+           </div>
+           
+           {/* Collapsible Custom Prompt */}
+           {showImageSettings && (
+             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1 duration-200">
+                <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
+                   <Type className="w-3 h-3" />
+                   Custom Image Prompt (Optional)
+                </label>
+                <textarea 
+                   value={customPrompt}
+                   onChange={(e) => setCustomPrompt(e.target.value)}
+                   placeholder={`Describe exactly what you want to see... (e.g. "A futuristic dashboard glowing in neon blue on a dark desk")`}
+                   className="w-full text-xs p-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none h-16"
+                />
+             </div>
+           )}
+
         </div>
       </div>
   );
@@ -566,7 +671,13 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
                      <select 
                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md py-1.5 pl-2 pr-6 text-xs text-slate-700 dark:text-slate-300"
                        value={selectedFbPage?.id || ''}
-                       onChange={(e) => setSelectedFbPage(fbPages.find(p => p.id === e.target.value) || null)}
+                       onChange={(e) => {
+                          const page = fbPages.find(p => p.id === e.target.value) || null;
+                          setSelectedFbPage(page);
+                          if (page) {
+                            localStorage.setItem('fb_selected_page_id', page.id);
+                          }
+                       }}
                      >
                        {fbPages.map(page => <option key={page.id} value={page.id}>{page.name}</option>)}
                      </select>
@@ -622,15 +733,15 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
         {/* Scrollable Preview Area */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/30 p-6 md:p-8">
            
-           {/* Research Context Callout - Clean, Professional */}
+           {/* Deep Research Context Callout - Enhanced */}
            {post.researchSummary && (
               <div className="mb-6 flex items-start gap-4 p-4 bg-white dark:bg-slate-900 border-l-4 border-indigo-500 rounded-r-lg shadow-sm">
                  <div className="pt-0.5">
-                    <Zap className="w-4 h-4 text-indigo-500" />
+                    <Search className="w-4 h-4 text-indigo-500" />
                  </div>
                  <div>
                     <div className="flex items-center gap-2 mb-1">
-                       <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Research Insight</span>
+                       <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Deep Dive Context</span>
                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                           {post.contentAngle}
                        </span>
