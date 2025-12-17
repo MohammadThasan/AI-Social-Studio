@@ -1,5 +1,5 @@
 
-export type Tone = 'Professional' | 'Visionary' | 'Controversial' | 'Educational' | 'Enthusiastic' | 'Skeptical';
+export type Tone = 'Professional' | 'Visionary' | 'Controversial' | 'Educational' | 'Enthusiastic' | 'Skeptical' | 'Architectural';
 
 export type Topic = 
   | 'GenAI & Multimodal'
@@ -22,6 +22,12 @@ export interface FormData {
   includeEmoji: boolean;
   includeHashtags: boolean;
   includePromptChaining: boolean;
+  includeCTA: boolean;
+  comparisonFormat: boolean;
+  tldrSummary: boolean;
+  includeFutureOutlook: boolean;
+  includeDevilsAdvocate: boolean;
+  includeImplementationSteps: boolean;
 }
 
 export interface GroundingSource {

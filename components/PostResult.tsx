@@ -1,15 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { GeneratedPost, FormData, ImageStyle, Platform, FacebookPage, FacebookUser } from '../types';
-import { generatePostImage } from '../services/geminiService';
+import { PLATFORM_SPECS } from '../constants';
+import { generatePostImage, rewritePost } from '../services/geminiService';
 import { initFacebookSdk, loginToFacebook, getFacebookUser, getFacebookPages, publishToFacebookPage, setFacebookAppId, hasFacebookAppId, checkLoginStatus } from '../services/facebookService';
 import ReactMarkdown from 'react-markdown';
 import { 
   Copy, Check, Share2, ExternalLink, Globe, Linkedin, Facebook, Download, 
-  RefreshCw, Palette, Twitter, Instagram, Loader2, LogIn, 
+  RefreshCw, RefreshCcw, Palette, Twitter, Instagram, Loader2, LogIn, 
   ChevronDown, Settings, BookOpen, Sparkles, Zap, MonitorPlay,
   User, ThumbsUp, MessageSquare, Repeat, Send, MoreHorizontal, AlertCircle,
-  RectangleHorizontal, RectangleVertical, Square, Sliders, Type, Search
+  RectangleHorizontal, RectangleVertical, Square, Sliders, Type, Search, Info,
+  Code, Users, Briefcase, Layers
 } from 'lucide-react';
 
 interface PostResultProps {
@@ -18,14 +20,104 @@ interface PostResultProps {
   error: string | null;
   formData: FormData;
   onImageUpdate: (url: string) => void;
+  onContentUpdate: (content: string) => void;
 }
 
 const IMAGE_STYLES: ImageStyle[] = ['Minimalist', 'Photorealistic', 'Abstract', 'Cyberpunk', 'Corporate', 'Watercolor'];
 
-const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formData, onImageUpdate }) => {
+// --- Character Counter Component ---
+const CharacterCounter: React.FC<{ text: string; platform: Platform }> = ({ text, platform }) => {
+  const specs = PLATFORM_SPECS[platform];
+  const count = text.length;
+  const isOverMax = count > specs.max;
+  const isSweetSpot = count >= specs.sweetSpot[0] && count <= specs.sweetSpot[1];
+  const isTooShort = count < specs.sweetSpot[0];
+  const isTooLong = count > specs.sweetSpot[1] && !isOverMax;
+
+  // Calculate percentage for progress bar (capped at 100% or slightly over for visual effect)
+  // For platforms with huge limits (Facebook), we use a visual max of 500 for the bar to keep it readable, 
+  // unless the text is actually huge.
+  const visualMax = platform === 'Facebook' ? Math.max(200, count + 50) : specs.max;
+  const percent = Math.min(100, (count / visualMax) * 100);
+
+  let statusColor = 'bg-slate-200 dark:bg-slate-700'; // Default
+  let textColor = 'text-slate-500';
+  let statusText = '';
+  let icon = <Info className="w-3 h-3" />;
+
+  if (isOverMax) {
+    statusColor = 'bg-red-500';
+    textColor = 'text-red-600 dark:text-red-400';
+    statusText = '❌ ERROR: Exceeds Hard Limit';
+    icon = <AlertCircle className="w-3 h-3" />;
+  } else if (isSweetSpot) {
+    statusColor = 'bg-emerald-500';
+    textColor = 'text-emerald-600 dark:text-emerald-400';
+    statusText = '✅ OPTIMIZED';
+    icon = <Check className="w-3 h-3" />;
+  } else if (isTooShort || isTooLong) {
+    statusColor = 'bg-amber-400';
+    textColor = 'text-amber-600 dark:text-amber-400';
+    statusText = `⚠️ WARNING: Outside Sweet Spot (${count} chars)`;
+    icon = <Info className="w-3 h-3" />;
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+      <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider mb-2">
+        <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+           <Type className="w-3 h-3" />
+           Validation
+        </span>
+        <span className={`${textColor} flex items-center gap-1`}>
+          {icon}
+          {statusText}
+        </span>
+      </div>
+      
+      {/* Progress Bar Container */}
+      <div className="relative w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+        {/* The Bar */}
+        <div 
+          className={`h-full transition-all duration-500 ease-out rounded-full ${statusColor}`} 
+          style={{ width: `${percent}%` }}
+        />
+        
+        {/* Markers for Sweet Spot (if scale permits) */}
+        {specs.sweetSpot[0] > 0 && (
+           <div 
+             className="absolute top-0 bottom-0 w-0.5 bg-black/10 dark:bg-white/10" 
+             style={{ left: `${(specs.sweetSpot[0] / visualMax) * 100}%` }} 
+             title="Sweet Spot Start"
+           />
+        )}
+        {specs.sweetSpot[1] < visualMax && (
+           <div 
+             className="absolute top-0 bottom-0 w-0.5 bg-black/10 dark:bg-white/10" 
+             style={{ left: `${(specs.sweetSpot[1] / visualMax) * 100}%` }} 
+             title="Sweet Spot End"
+           />
+        )}
+      </div>
+
+      <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+        <span>{count.toLocaleString()} / {specs.max.toLocaleString()}</span>
+        {specs.cutoff && count > specs.cutoff && (
+          <span className="text-orange-400 font-medium flex items-center gap-1">
+             <Info className="w-2.5 h-2.5" /> Hook limit: ~{specs.cutoff}
+          </span>
+        )}
+        <span>Target: {specs.sweetSpot[0]}-{specs.sweetSpot[1]}</span>
+      </div>
+    </div>
+  );
+};
+
+const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formData, onImageUpdate, onContentUpdate }) => {
   const [copied, setCopied] = useState(false);
   const [sourcesCopied, setSourcesCopied] = useState(false);
   const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
+  const [isRewriting, setIsRewriting] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<ImageStyle>('Minimalist');
   const [shareMessage, setShareMessage] = useState<string | null>(null);
 
@@ -189,26 +281,55 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
   };
 
   const copyToClipboard = async (text: string) => {
+    // Attempt 1: Modern API
+    // We try this first. If it fails (e.g. permission denied in iframe), we silently fall back.
     if (navigator.clipboard && navigator.clipboard.writeText) {
       try {
         await navigator.clipboard.writeText(text);
         return true;
       } catch (err) {
-        console.warn('Clipboard API failed', err);
+        // Suppress error here to avoid console noise in dev environments
       }
     }
+
+    // Attempt 2: Fallback (execCommand)
     try {
       const textArea = document.createElement("textarea");
       textArea.value = text;
+      
+      // Prevent scrolling to bottom of page in MS Edge.
       textArea.style.position = "fixed";
-      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.width = "2em";
+      textArea.style.height = "2em";
+      textArea.style.padding = "0";
+      textArea.style.border = "none";
+      textArea.style.outline = "none";
+      textArea.style.boxShadow = "none";
+      textArea.style.background = "transparent";
+      // Avoid flash of white box
+      textArea.style.opacity = "0";
+      
       document.body.appendChild(textArea);
+      textArea.focus();
       textArea.select();
-      document.execCommand('copy');
+
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        console.warn('Fallback: Unable to copy', err);
+      }
+
       document.body.removeChild(textArea);
-      return true;
+      
+      if (!success) {
+        console.error("Clipboard copy failed (both methods).");
+      }
+      return success;
     } catch (e) {
-      console.error(e);
+      console.error("Copy failed completely", e);
       return false;
     }
   };
@@ -258,6 +379,19 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
     } finally {
       setIsRegeneratingImage(false);
     }
+  };
+
+  const handleRewrite = async (audience: string) => {
+      if (!post || isRewriting) return;
+      setIsRewriting(true);
+      try {
+          const newContent = await rewritePost(post.content, formData.platform, audience);
+          onContentUpdate(newContent);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsRewriting(false);
+      }
   };
 
   const handleSmartShare = async (targetPlatform: Platform) => {
@@ -757,13 +891,61 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 md:p-8 transition-colors duration-300 max-w-3xl mx-auto">
               
               <MockProfileHeader platform={formData.platform} />
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mr-2">
+                     <RefreshCcw className={`w-3.5 h-3.5 ${isRewriting ? 'animate-spin' : ''}`} />
+                     Rewrite for:
+                  </div>
+                  <button 
+                      onClick={() => handleRewrite('Technical')} 
+                      disabled={isRewriting}
+                      className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                      <Code className="w-3 h-3" /> Technical
+                  </button>
+                  <button 
+                      onClick={() => handleRewrite('General')} 
+                      disabled={isRewriting}
+                      className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                      <Users className="w-3 h-3" /> General
+                  </button>
+                  <button 
+                      onClick={() => handleRewrite('Executive')} 
+                      disabled={isRewriting}
+                      className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                      <Briefcase className="w-3 h-3" /> Executive
+                  </button>
+                  <button 
+                      onClick={() => handleRewrite('System Design')} 
+                      disabled={isRewriting}
+                      className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                      <Layers className="w-3 h-3" /> System Design
+                  </button>
+              </div>
               
               {/* Content Body - Refined Typography */}
-              <div className={`prose prose-slate dark:prose-invert max-w-none mb-6 
-                  prose-p:text-[15px] prose-p:leading-7 prose-p:text-slate-700 dark:prose-p:text-slate-300 
-                  prose-headings:font-semibold prose-headings:text-slate-900 dark:prose-headings:text-white
-                  prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
-                  ${formData.platform === 'X (Twitter)' ? 'whitespace-pre-wrap font-sans' : ''}`}>
+              <div className={`prose prose-slate dark:prose-invert max-w-none mb-6
+                    /* Paragraphs */
+                    prose-p:text-base prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-p:mb-4
+                    /* Headings */
+                    prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-headings:mt-6 prose-headings:mb-3
+                    /* Lists */
+                    prose-ul:my-4 prose-ul:list-disc prose-ul:pl-4
+                    prose-li:text-slate-700 dark:prose-li:text-slate-300 prose-li:my-1.5 prose-li:marker:text-slate-400
+                    /* Links */
+                    prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
+                    /* Strong */
+                    prose-strong:font-semibold prose-strong:text-slate-900 dark:prose-strong:text-white
+                    /* Blockquotes */
+                    prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-slate-600 dark:prose-blockquote:text-slate-400
+                    /* Platform Specific Overrides */
+                    ${formData.platform === 'X (Twitter)' ? 'whitespace-pre-wrap text-[15px] prose-p:my-2 prose-p:leading-normal' : ''}
+                    ${formData.platform === 'LinkedIn' ? 'prose-p:mb-5' : ''}
+                `}>
                  <ReactMarkdown>
                     {post.content}
                  </ReactMarkdown>
@@ -773,6 +955,9 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
               {post.imageUrl && (
                  <ImageSection />
               )}
+              
+              {/* Visual Character Counter */}
+              <CharacterCounter text={post.content} platform={formData.platform} />
 
               <MockEngagement platform={formData.platform} />
 

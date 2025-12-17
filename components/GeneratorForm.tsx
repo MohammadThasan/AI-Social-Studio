@@ -1,7 +1,12 @@
+
 import React from 'react';
 import { FormData, Topic, Tone, Platform } from '../types';
 import { TOPICS, TONES } from '../constants';
-import { Wand2, Loader2, Link2, Linkedin, Facebook, Twitter, Instagram, BookOpen, ChevronDown } from 'lucide-react';
+import { 
+  Wand2, Loader2, Link2, Linkedin, Facebook, Twitter, Instagram, BookOpen, 
+  ChevronDown, Megaphone, ArrowRightLeft, ListEnd, Hash, Smile,
+  Telescope, Scale, ListTodo
+} from 'lucide-react';
 
 interface GeneratorFormProps {
   formData: FormData;
@@ -27,6 +32,54 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
     { id: 'Medium', label: 'Medium', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'Instagram', label: 'Insta', icon: <Instagram className="w-4 h-4" /> },
     { id: 'Facebook', label: 'Facebook', icon: <Facebook className="w-4 h-4" /> },
+  ];
+
+  const OPTIONS_CONFIG = [
+    { 
+      key: 'includeEmoji', 
+      label: 'Use Emojis', 
+      icon: <Smile className="w-3.5 h-3.5 text-amber-500" /> 
+    },
+    { 
+      key: 'includeHashtags', 
+      label: 'Include Hashtags', 
+      icon: <Hash className="w-3.5 h-3.5 text-blue-500" /> 
+    },
+    { 
+      key: 'includePromptChaining', 
+      label: 'Prompt Chain Ex.', 
+      icon: <Link2 className="w-3.5 h-3.5 text-slate-400" /> 
+    },
+    { 
+      key: 'comparisonFormat', 
+      label: 'Before vs After', 
+      icon: <ArrowRightLeft className="w-3.5 h-3.5 text-indigo-500" /> 
+    },
+    { 
+      key: 'includeCTA', 
+      label: 'Strong CTA', 
+      icon: <Megaphone className="w-3.5 h-3.5 text-red-500" /> 
+    },
+    { 
+      key: 'tldrSummary', 
+      label: 'TL;DR Summary', 
+      icon: <ListEnd className="w-3.5 h-3.5 text-emerald-500" /> 
+    },
+    { 
+      key: 'includeFutureOutlook', 
+      label: 'Future Outlook', 
+      icon: <Telescope className="w-3.5 h-3.5 text-purple-500" /> 
+    },
+    { 
+      key: 'includeDevilsAdvocate', 
+      label: "Devil's Advocate", 
+      icon: <Scale className="w-3.5 h-3.5 text-orange-500" /> 
+    },
+    { 
+      key: 'includeImplementationSteps', 
+      label: 'Action Plan', 
+      icon: <ListTodo className="w-3.5 h-3.5 text-cyan-500" /> 
+    }
   ];
 
   return (
@@ -135,36 +188,21 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
              Options
             </label>
-           <div className="space-y-2">
-            <label className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg cursor-pointer transition-colors">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Use Emojis</span>
-              <input 
-                type="checkbox" 
-                checked={formData.includeEmoji}
-                onChange={(e) => handleChange('includeEmoji', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800"
-              />
-            </label>
-            <label className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg cursor-pointer transition-colors">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Include Hashtags</span>
-              <input 
-                type="checkbox" 
-                checked={formData.includeHashtags}
-                onChange={(e) => handleChange('includeHashtags', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800"
-              />
-            </label>
-            <label className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg cursor-pointer transition-colors">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                 Prompt Chain <Link2 className="w-3 h-3 text-slate-400" />
-              </span>
-              <input 
-                type="checkbox" 
-                checked={formData.includePromptChaining}
-                onChange={(e) => handleChange('includePromptChaining', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800"
-              />
-            </label>
+           <div className="grid grid-cols-1 gap-1">
+             {OPTIONS_CONFIG.map((opt) => (
+               <label key={opt.key} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg cursor-pointer transition-colors group">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                   {opt.icon}
+                   {opt.label}
+                </span>
+                <input 
+                  type="checkbox" 
+                  checked={(formData as any)[opt.key]}
+                  onChange={(e) => handleChange(opt.key as any, e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 cursor-pointer"
+                />
+              </label>
+             ))}
            </div>
         </div>
       </div>

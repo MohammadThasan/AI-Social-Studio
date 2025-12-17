@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import GeneratorForm from './components/GeneratorForm';
@@ -14,6 +15,12 @@ const App: React.FC = () => {
     includeEmoji: true,
     includeHashtags: true,
     includePromptChaining: false,
+    includeCTA: false,
+    comparisonFormat: false,
+    tldrSummary: false,
+    includeFutureOutlook: false,
+    includeDevilsAdvocate: false,
+    includeImplementationSteps: false,
   });
 
   const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
@@ -63,6 +70,12 @@ const App: React.FC = () => {
     }
   };
 
+  const handleContentUpdate = (content: string) => {
+    if (generatedPost) {
+      setGeneratedPost({ ...generatedPost, content });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
@@ -88,6 +101,7 @@ const App: React.FC = () => {
               error={error}
               formData={formData}
               onImageUpdate={handleImageUpdate}
+              onContentUpdate={handleContentUpdate}
             />
           </div>
           

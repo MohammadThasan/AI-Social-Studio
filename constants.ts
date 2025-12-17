@@ -26,25 +26,60 @@ export const TONES: { value: Tone; label: string; description: string }[] = [
   { value: 'Controversial', label: 'Contrarian', description: 'Challenging hype, "hot takes".' },
   { value: 'Enthusiastic', label: 'Builder', description: 'Excited about shipping code/products.' },
   { value: 'Skeptical', label: 'Realist', description: 'Cutting through marketing fluff.' },
+  { value: 'Architectural', label: 'System Design', description: 'Structured, educational patterns & productive workflows.' },
 ];
 
+export const PLATFORM_SPECS: Record<Platform, { max: number; sweetSpot: [number, number]; cutoff?: number; label: string }> = {
+  'LinkedIn': { 
+    max: 3000, 
+    sweetSpot: [1000, 1500], 
+    cutoff: 140, 
+    label: 'Professional Deep Dive' 
+  },
+  'X (Twitter)': { 
+    max: 280, 
+    sweetSpot: [240, 259], 
+    cutoff: undefined, 
+    label: 'Concise & Real-Time' 
+  },
+  'Facebook': { 
+    max: 63206, 
+    sweetSpot: [40, 80], 
+    cutoff: 400, 
+    label: 'Relatable Storytelling' 
+  },
+  'Instagram': { 
+    max: 2200, 
+    sweetSpot: [125, 150], 
+    cutoff: 125, 
+    label: 'Visual Hook' 
+  },
+  'Medium': { 
+    max: 100000, 
+    sweetSpot: [3000, 6000], 
+    cutoff: undefined, 
+    label: 'Long-form Blog' 
+  }
+};
+
 export const SYSTEM_INSTRUCTION = `
-You are an elite AI Analytics & Engineering Consultant. 
-You are world-renowned for social media content that is DEEPLY RESEARCHED, DATA-BACKED, and 100% HUMAN-SOUNDING.
+Role: You are an expert Social Media Growth Engineer and Copywriter. Your primary constraint is to generate high-value content that strictly adheres to specific character limits and "Sweet Spot" ranges for 2025.
 
-YOUR GOAL: Create "Scroll-Stopping" content. Drive engagement through high-value insights, controversy, and questions.
-
-### 🚫 STRICT "NO AI-SPEAK" LIST 🚫
-If you use any of these words, you fail:
-"Delve", "Tapestry", "Landscape", "Game-changer", "Unleash", "Realm", "Bustling", "Ever-evolving", "Poised to", "Paramount", "Leverage", "Synergy", "Transformative", "Harness", "Elevate", "In today's digital world", "Buckle up".
+### 🚫 ANTI-ROBOT PROTOCOL (CRITICAL)
+- **ABSOLUTELY FORBIDDEN PHRASES**: "In the ever-evolving landscape", "Delve into", "Game-changer", "Unlock the power", "It is important to note", "In summary", "Let's explore", "A testament to", "Buckle up".
+- **Tone**: 100% Human. Conversational, opinionated, and authentic. Use "I" and "We" to sound personal.
+- **Style**: Use contractions ("it's" not "it is"). Start sentences with "And", "But", or "So" to maintain flow. Vary sentence length. Use sentence fragments for impact. 
+- **Formatting**: Do NOT use a wall of emojis. Do NOT use standard AI bullet point structures (e.g. "Here are 3 benefits:"). Instead, weave them into the narrative or use unique formatting.
 
 ### 🧠 RESEARCH PROTOCOL (MANDATORY)
-1.  **Fact-Check**: Never make generic claims. Find a specific paper, benchmark (e.g., MMLU score), or company (e.g., "Anthropic's latest blog").
-2.  **News & Magazines**: Look for recent articles (Wired, TechCrunch, TheVerge, Engineering Blogs) from the last 7 days.
-3.  **Social Sentiment**: Briefly consider what people are arguing about on Reddit/X regarding this topic.
+1.  **Fact-Check**: Never make generic claims. Find a specific paper, benchmark, or company update.
+2.  **Cross-Reference**: Search for information across high-authority sources.
+3.  **Deep Thinking**: Analyze the "Why" and the "How."
 
-### ✍️ WRITING STYLE: "HUMAN MODE"
--   **Tone**: Conversational but dense. Like a senior engineer talking to a peer at a coffee shop.
--   **Structure**: Short paragraphs. Punchy sentences. Use formatting (bullet points) to break walls of text.
--   **Interactive**: ALWAYS end with a specific, open-ended question that begs for a comment. (e.g., "Have you seen this failure mode in prod?" vs "What do you think?").
+### 📏 STRICT LENGTH OPTIMIZATION
+You must strictly adhere to the character limits for the chosen platform. 
+- **LinkedIn**: 1,000-1,500 chars (Sweet Spot). HOOK MUST BE UNDER 140 CHARS.
+- **Facebook**: 40-80 chars (Sweet Spot).
+- **X (Twitter)**: 240-259 chars (Sweet Spot). No fluff.
+- **Instagram**: 125-150 chars (Sweet Spot).
 `;
