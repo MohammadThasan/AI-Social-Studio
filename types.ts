@@ -1,13 +1,16 @@
 
+// Tone options for social media generation
 export type Tone = 'Professional' | 'Visionary' | 'Controversial' | 'Educational' | 'Enthusiastic' | 'Skeptical' | 'Architectural';
 
+// Corrected Topic type to match the values in constants.ts
 export type Topic = 
-  | 'GenAI & Multimodal'
-  | 'AI Engineering & Ops'
-  | 'Agentic AI (Autonomous)'
-  | 'RAG & Vector DBs'
-  | 'LLM Architectures'
-  | 'Emerging/Experimental'
+  | 'Predictive Forecasting'
+  | 'Generative BI & Chat-with-Data'
+  | 'Autonomous Data Agents'
+  | 'Real-time Anomaly Detection'
+  | 'Customer Intent Analytics'
+  | 'Automated Insight Synthesis'
+  | 'Data Privacy in Analytics'
   | 'Custom';
 
 export type ImageStyle = 'Minimalist' | 'Photorealistic' | 'Abstract' | 'Cyberpunk' | 'Corporate' | 'Watercolor' | '3D Render';
@@ -36,14 +39,14 @@ export interface GroundingSource {
 }
 
 export interface GeneratedPost {
-  researchSummary: string; // Brief summary of the researched insight
-  contentAngle: string;    // Technical, Business, Ethical, etc.
-  content: string;         // The actual post
+  researchSummary: string;
+  contentAngle: string;
+  content: string;
   hashtags: string[];
   imageUrl?: string;
   sources: GroundingSource[];
   timestamp: number;
-  scheduledFor?: string;   // ISO Date string for scheduled posts
+  scheduledFor?: string;
 }
 
 export interface FacebookPage {
