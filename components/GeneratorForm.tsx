@@ -5,7 +5,8 @@ import { TOPICS, TONES } from '../constants';
 import { 
   Wand2, Loader2, Link2, Linkedin, Facebook, Twitter, Instagram, BookOpen, 
   ChevronDown, Megaphone, ArrowRightLeft, ListEnd, Hash, Smile,
-  Telescope, Scale, ListTodo, BarChart3, Database, BrainCircuit, ShieldCheck, Activity
+  Telescope, Scale, ListTodo, BarChart3, Database, BrainCircuit, ShieldCheck, Activity,
+  Sparkles, Bot, Cpu, GraduationCap, Briefcase, Coffee, Globe
 } from 'lucide-react';
 
 interface GeneratorFormProps {
@@ -28,6 +29,12 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
 
   const getTopicIcon = (topic: string) => {
     switch (topic) {
+        case 'Generative AI': return <Sparkles className="w-4 h-4 text-indigo-500" />;
+        case 'Agentic AI': return <Bot className="w-4 h-4 text-indigo-500" />;
+        case 'AI Automation': return <Cpu className="w-4 h-4 text-indigo-500" />;
+        case 'AI for Education': return <GraduationCap className="w-4 h-4 text-indigo-500" />;
+        case 'AI for professionals': return <Briefcase className="w-4 h-4 text-indigo-500" />;
+        case 'AI for Daily life': return <Coffee className="w-4 h-4 text-indigo-500" />;
         case 'Predictive Forecasting': return <BarChart3 className="w-4 h-4 text-indigo-500" />;
         case 'Generative BI & Chat-with-Data': return <BrainCircuit className="w-4 h-4 text-indigo-500" />;
         case 'Autonomous Data Agents': return <Activity className="w-4 h-4 text-indigo-500" />;

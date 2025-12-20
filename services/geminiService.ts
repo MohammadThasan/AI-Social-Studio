@@ -18,36 +18,18 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
   switch (platform) {
     case 'LinkedIn':
       platformStrategy = `
-        Constraint: LinkedIn (Professional Insights)
-        - **VOICE**: Senior AI Analytics Lead. Expert but accessible.
-        - **Structure**: Hook (under 140 chars) -> Data Context -> The "Aha!" Moment -> Strategic Ask.
-        - **Anti-Patterns**: No corporate "In today's landscape".
-        - Technical Limit: 3,000 characters.
-        - **Target Length**: 1,000–1,500 characters.
+        Constraint: LinkedIn (Insider Perspective)
+        - **VOICE**: Direct, opinionated, technical leader.
+        - **Structure**: Start with a "Controversial Fact" or a "Hidden Bottleneck". No "Hello LinkedIn".
+        - **Technical Limit**: 3,000 characters.
+        - **Target Length**: 1,200–1,600 characters for maximum "dwell time".
       `;
       break;
     case 'X (Twitter)':
       platformStrategy = `
-        Constraint: X / Twitter (Concise & Real-Time)
-        - **VOICE**: Insider, data-scientist vibe. Punchy.
-        - Technical Limit: 280 characters.
-        - **Target Length**: 240–259 characters.
-      `;
-      break;
-    case 'Facebook':
-      platformStrategy = `
-        Constraint: Facebook (Relatable Storytelling)
-        - **VOICE**: Casual but smart. "Why this AI thing helps you."
-        - Technical Limit: 63,206 chars.
-        - **Target Length**: 80–250 characters.
-      `;
-      break;
-    case 'Instagram':
-      platformStrategy = `
-        Constraint: Instagram (Visual First)
-        - **VOICE**: Aesthetic, trend-focused.
-        - Technical Limit: 2,200 chars.
-        - **Target Length**: 125–150 characters.
+        Constraint: X / Twitter (The "Hot Take")
+        - **VOICE**: Raw, immediate, code-centric.
+        - **Target Length**: 240–280 characters.
       `;
       break;
     default:
@@ -56,39 +38,41 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
 
   let angleInstruction: string = data.tone;
   if (data.tone === 'Architectural') {
-    angleInstruction = "System Design & Data Engineering. Focus on ETL/ELT pipelines, vector databases, and scalable analytics architectures. Use analogies like 'plumbing' vs 'refining'.";
+    angleInstruction = "System Design & Data Engineering. Focus on the 'Why' behind the infrastructure choice (e.g., why Ray vs Spark for this specific AI workload).";
   }
 
   const prompt = `
-    TASK: Perform DEEP RESEARCH and write a high-engagement ${platform} post about the AI Analytics topic: "${topicToUse}".
+    TASK: Perform DEEP TECHNICAL RESEARCH on the AI Analytics topic: "${topicToUse}".
 
-    STEP 1: 🕵️ DEEP WEB SEARCH (MANDATORY)
-    Find 3 distinct data points from the last 2 weeks:
-    1. **The Stat**: A specific analytics metric (e.g. "LLM latency reduced by 40% using...")
-    2. **The Tech**: A recent framework update (e.g. LangGraph, dbt-core 1.x, etc.)
-    3. **The Market**: A business impact (e.g. "Retailer X saved $YM by implementing...")
-
-    STEP 2: 🧠 SYNTHESIS
-    Angle: ${angleInstruction}. Focus on AI Analytics industry trends.
-
-    STEP 3: ✍️ WRITE POST
-    ${platformStrategy}
+    INSTRUCTIONS FOR DEEP THINKING:
+    1. **Identify the Hype vs. Reality**: Find a specific technical reason why people are struggling with this topic right now.
+    2. **Find the "Hidden Gem"**: Find a specific benchmark result, a GitHub repo, or a niche engineering blog post from the last 72-96 hours.
+    3. **Synthesize a "Hot Take"**: What is everyone getting wrong about "${topicToUse}"?
     
-    **ADDITIONAL INSTRUCTIONS:**
-    ${data.comparisonFormat ? '- Use comparison format (Before AI vs After AI Analytics).' : ''}
-    ${data.includeCTA ? '- Include a strong Call to Action.' : ''}
-    ${data.tldrSummary ? '- Add a TL;DR summary at the bottom.' : ''}
-    ${data.includeFutureOutlook ? '- Predict the impact in 12 months.' : ''}
-    ${data.includeDevilsAdvocate ? '- Add a contrarian view (e.g. why this might fail).' : ''}
-    ${data.includeImplementationSteps ? '- Provide a 3-step action plan.' : ''}
-    ${data.includeEmoji ? '- Max 3 relevant emojis.' : '- NO emojis.'}
+    STEP 1: 🕵️ SEARCH & VERIFY
+    Find 3 hard data points from high-fidelity sources (Engineering blogs, ArXiv, Documentation). 
+    Avoid news sites; go to the source.
+
+    STEP 2: ✍️ WRITE THE POST
+    ${platformStrategy}
+    Angle: ${angleInstruction}. 
+    
+    **MANDATORY REALISM CHECKS:**
+    - Use specific numbers (e.g., "$0.04 per 1k tokens" vs "it's expensive").
+    - Mention a specific library or tool (e.g., "Polars," "DuckDB," "vLLM," "LangGraph").
+    - Address a "Pain Point" (e.g., "The issue isn't the model; it's the context window retrieval latency").
+
+    ${data.comparisonFormat ? '- Use a technical Before vs After table/list.' : ''}
+    ${data.includeCTA ? '- Ask a high-level technical question to prompt discussion.' : ''}
+    ${data.includeDevilsAdvocate ? '- Explicitly state why this specific AI approach might be technical debt in 6 months.' : ''}
+    ${data.includeEmoji ? '- Max 2 emojis, used only for structural emphasis.' : '- NO emojis.'}
 
     Return JSON:
     {
-      "researchSummary": "Summary of findings with source names.",
-      "contentAngle": "The take.",
-      "postContent": "The actual text.",
-      "hashtags": ["tag1", "tag2"]
+      "researchSummary": "Technical breakdown of findings.",
+      "contentAngle": "Unique perspective.",
+      "postContent": "The post text.",
+      "hashtags": ["#tag1", "#tag2"]
     }
   `;
 
@@ -99,8 +83,8 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         tools: [{ googleSearch: {} }],
-        temperature: 0.8,
-        thinkingConfig: { thinkingBudget: 2000 }
+        temperature: 0.75, // Slightly lower temperature for more "grounded" and precise facts
+        thinkingConfig: { thinkingBudget: 32768 } // Max thinking budget for deepest possible synthesis
       },
     });
 
@@ -121,8 +105,8 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
         parsedResult = JSON.parse(jsonString);
     } catch (e) {
         parsedResult = {
-            researchSummary: "Analysis complete.",
-            contentAngle: "General",
+            researchSummary: "Analysis complete based on latest engineering benchmarks.",
+            contentAngle: "Technical Deep Dive",
             postContent: response.text,
             hashtags: []
         };
@@ -162,8 +146,12 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
 
 export const rewritePost = async (content: string, platform: string, audience: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Rewrite this ${platform} AI Analytics post for a ${audience} audience. Sound like a human. Original: ${content}`;
-  const response = await ai.models.generateContent({ model: "gemini-3-pro-preview", contents: prompt });
+  const prompt = `Act as a senior technical peer. Critically review and rewrite this ${platform} post for a ${audience} audience. Focus on clarity and removing any remaining 'marketing fluff'. Original: ${content}`;
+  const response = await ai.models.generateContent({ 
+    model: "gemini-3-pro-preview", 
+    contents: prompt,
+    config: { thinkingConfig: { thinkingBudget: 4000 } } 
+  });
   return response.text || content;
 };
 
@@ -182,10 +170,9 @@ export const generatePostImage = async (data: FormData, style: ImageStyle = '3D 
   };
 
   const modifier = styleModifiers[style] || styleModifiers['3D Render'];
-  const imagePrompt = manualPrompt || `Stunning visual for AI Analytics: ${topicToUse}. ${modifier}. No text.`;
+  const imagePrompt = manualPrompt || `Conceptual technical visualization for AI Analytics infrastructure: ${topicToUse}. ${modifier}. No text.`;
 
   try {
-    // Using gemini-2.5-flash-image to avoid mandatory pre-selection of API key
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: imagePrompt }] },

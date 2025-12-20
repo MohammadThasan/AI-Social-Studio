@@ -2,8 +2,14 @@
 // Tone options for social media generation
 export type Tone = 'Professional' | 'Visionary' | 'Controversial' | 'Educational' | 'Enthusiastic' | 'Skeptical' | 'Architectural';
 
-// Corrected Topic type to match the values in constants.ts
+// Corrected Topic type to include new requested domains
 export type Topic = 
+  | 'Generative AI'
+  | 'Agentic AI'
+  | 'AI Automation'
+  | 'AI for Education'
+  | 'AI for professionals'
+  | 'AI for Daily life'
   | 'Predictive Forecasting'
   | 'Generative BI & Chat-with-Data'
   | 'Autonomous Data Agents'
