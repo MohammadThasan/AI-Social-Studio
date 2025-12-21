@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { FormData, GeneratedPost, GroundingSource, ImageStyle } from '../types';
 import { SYSTEM_INSTRUCTION, PLATFORM_SPECS } from '../constants';
@@ -18,60 +17,47 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
   switch (platform) {
     case 'LinkedIn':
       platformStrategy = `
-        Constraint: LinkedIn (Insider Perspective)
-        - **VOICE**: Direct, opinionated, technical leader.
-        - **Structure**: Start with a "Controversial Fact" or a "Hidden Bottleneck". No "Hello LinkedIn".
-        - **Technical Limit**: 3,000 characters.
-        - **Target Length**: 1,200–1,600 characters for maximum "dwell time".
+        Constraint: LinkedIn Authority
+        - STYLE: Punchy, first-person expert. 
+        - STRUCTURE: Hook (scrolling stopper) followed by insight-driven value.
+        - FORMAT: White space between lines. NO ASTERISKS.
       `;
       break;
     case 'X (Twitter)':
       platformStrategy = `
-        Constraint: X / Twitter (The "Hot Take")
-        - **VOICE**: Raw, immediate, code-centric.
-        - **Target Length**: 240–280 characters.
+        Constraint: X/Twitter Post
+        - STYLE: Direct, news-like, or high-value tip.
+        - FORMAT: NO ASTERISKS.
       `;
       break;
     default:
-      platformStrategy = `Target Length: ${specs.sweetSpot[0]}-${specs.sweetSpot[1]} characters.`;
-  }
-
-  let angleInstruction: string = data.tone;
-  if (data.tone === 'Architectural') {
-    angleInstruction = "System Design & Data Engineering. Focus on the 'Why' behind the infrastructure choice (e.g., why Ray vs Spark for this specific AI workload).";
+      platformStrategy = `Keep it professional, human-sounding, and strictly avoid all asterisks (*).`;
   }
 
   const prompt = `
-    TASK: Perform DEEP TECHNICAL RESEARCH on the AI Analytics topic: "${topicToUse}".
+    PHASE 1: DEEP WEB & SOCIAL SEARCH
+    1. Search the deep web for technical implementations of "${topicToUse}" from the last 7 days.
+    2. Search social media (X, LinkedIn discussions) to find contrarian views or what people are actually complaining about/praising regarding "${topicToUse}".
+    3. Look for specific metrics: benchmarks, cost comparisons, or deployment hurdles.
 
-    INSTRUCTIONS FOR DEEP THINKING:
-    1. **Identify the Hype vs. Reality**: Find a specific technical reason why people are struggling with this topic right now.
-    2. **Find the "Hidden Gem"**: Find a specific benchmark result, a GitHub repo, or a niche engineering blog post from the last 72-96 hours.
-    3. **Synthesize a "Hot Take"**: What is everyone getting wrong about "${topicToUse}"?
+    PHASE 2: SYNTHESIS
+    Identify a "hidden truth" that generic AI summaries miss. This is your "Gap Analysis."
+
+    PHASE 3: DRAFTING
+    Write a ${platform} post based on this research.
+    - Perspective: ${data.tone}.
+    - RULE: ABSOLUTELY NO ASTERISKS (*). Use plain text structure.
     
-    STEP 1: 🕵️ SEARCH & VERIFY
-    Find 3 hard data points from high-fidelity sources (Engineering blogs, ArXiv, Documentation). 
-    Avoid news sites; go to the source.
-
-    STEP 2: ✍️ WRITE THE POST
-    ${platformStrategy}
-    Angle: ${angleInstruction}. 
-    
-    **MANDATORY REALISM CHECKS:**
-    - Use specific numbers (e.g., "$0.04 per 1k tokens" vs "it's expensive").
-    - Mention a specific library or tool (e.g., "Polars," "DuckDB," "vLLM," "LangGraph").
-    - Address a "Pain Point" (e.g., "The issue isn't the model; it's the context window retrieval latency").
-
-    ${data.comparisonFormat ? '- Use a technical Before vs After table/list.' : ''}
-    ${data.includeCTA ? '- Ask a high-level technical question to prompt discussion.' : ''}
-    ${data.includeDevilsAdvocate ? '- Explicitly state why this specific AI approach might be technical debt in 6 months.' : ''}
-    ${data.includeEmoji ? '- Max 2 emojis, used only for structural emphasis.' : '- NO emojis.'}
+    ${data.comparisonFormat ? '- Use a "Then vs. Now" comparison.' : ''}
+    ${data.includeCTA ? '- End with a high-engagement question.' : ''}
+    ${data.includeDevilsAdvocate ? '- Mention a legitimate reason to be skeptical.' : ''}
+    ${data.includeEmoji ? '- Use minimal, high-quality emojis.' : '- NO emojis.'}
 
     Return JSON:
     {
-      "researchSummary": "Technical breakdown of findings.",
-      "contentAngle": "Unique perspective.",
-      "postContent": "The post text.",
+      "researchSummary": "A data-heavy summary of your deep web and social media findings. NO ASTERISKS.",
+      "contentAngle": "The unique hook.",
+      "postContent": "The final post. NO ASTERISKS.",
       "hashtags": ["#tag1", "#tag2"]
     }
   `;
@@ -83,35 +69,32 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         tools: [{ googleSearch: {} }],
-        temperature: 0.75, // Slightly lower temperature for more "grounded" and precise facts
-        thinkingConfig: { thinkingBudget: 32768 } // Max thinking budget for deepest possible synthesis
+        temperature: 0.7, 
+        thinkingConfig: { thinkingBudget: 32768 } 
       },
     });
 
     let jsonString = response.text || "{}";
-    const codeBlockMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
-    if (codeBlockMatch) {
-      jsonString = codeBlockMatch[1];
-    } else {
-      const firstOpen = jsonString.indexOf('{');
-      const lastClose = jsonString.lastIndexOf('}');
-      if (firstOpen !== -1 && lastClose !== -1) {
-        jsonString = jsonString.substring(firstOpen, lastClose + 1);
-      }
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
     }
+
+    // Final safety check for asterisks in the raw response text before parsing
+    jsonString = jsonString.replace(/\*/g, '');
 
     let parsedResult;
     try {
         parsedResult = JSON.parse(jsonString);
     } catch (e) {
         parsedResult = {
-            researchSummary: "Analysis complete based on latest engineering benchmarks.",
-            contentAngle: "Technical Deep Dive",
-            postContent: response.text,
+            researchSummary: "Analysis of the latest technical deployments and social sentiment indicates rapid evolution in this sector.",
+            contentAngle: "Real-world implementation strategies",
+            postContent: response.text?.replace(/\*/g, '') || "Technical synthesis complete.",
             hashtags: []
         };
     }
-    
+
     const sources: GroundingSource[] = [];
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     if (groundingChunks) {
@@ -146,36 +129,44 @@ export const generateSocialPost = async (data: FormData): Promise<GeneratedPost>
 
 export const rewritePost = async (content: string, platform: string, audience: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Act as a senior technical peer. Critically review and rewrite this ${platform} post for a ${audience} audience. Focus on clarity and removing any remaining 'marketing fluff'. Original: ${content}`;
+  const prompt = `Rewrite this ${platform} post for a ${audience} audience. Sound like a human peer. STRICTLY NO ASTERISKS (*). Original: ${content}`;
   const response = await ai.models.generateContent({ 
     model: "gemini-3-pro-preview", 
     contents: prompt,
-    config: { thinkingConfig: { thinkingBudget: 4000 } } 
+    config: { 
+      systemInstruction: "You are a senior technical writer. ABSOLUTELY NO ASTERISKS (*) ALLOWED.",
+      thinkingConfig: { thinkingBudget: 4000 } 
+    } 
   });
-  return response.text || content;
+  return (response.text || content).replace(/\*/g, '');
 };
 
-export const generatePostImage = async (data: FormData, style: ImageStyle = '3D Render', manualAspectRatio?: string, manualPrompt?: string): Promise<string | undefined> => {
+export const generatePostImage = async (data: FormData, style: ImageStyle = '3D Render', manualAspectRatio: string = '1:1', manualPrompt?: string): Promise<string | undefined> => {
   if (!process.env.API_KEY) return undefined;
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const topicToUse = data.topic === 'Custom' ? data.customTopic : data.topic;
   
   const styleModifiers: Record<string, string> = {
-    '3D Render': "hyper-realistic 3D isometric render, Blender style, soft global illumination, octane render, 4k, trending on ArtStation, glass and matte textures, data visualization structures.",
-    'Photorealistic': "professional high-res photography, cinematic lighting, shallow depth of field, sharp focus, 8k.",
-    'Minimalist': "clean Bauhaus aesthetic, simple geometric shapes, limited palette.",
-    'Abstract': "flowing data streams, complex mathematical patterns, ethereal light.",
-    'Cyberpunk': "vibrant neon, data-noir aesthetic, high contrast.",
-    'Corporate': "clean modern UI/UX visualization, glassmorphism elements."
+    '3D Render': "Ultra-high-fidelity 3D render, isometric perspective, soft global illumination, octane render style, glassmorphism elements, frosted glass and matte plastic textures, clean minimal geometry, professional studio lighting, 8k resolution.",
+    'Photorealistic': "professional lifestyle photography of a workspace with modern tech, warm cinematic lighting, sharp focus, 8k.",
+    'Minimalist': "elegant geometric abstract, thin lines, clean negative space, vector aesthetic.",
+    'Abstract': "fluid digital gradients, organic data flow, soft ethereal lighting.",
+    'Cyberpunk': "tech-noir, vibrant neon accents, detailed circuitry, holographic interfaces, dark background.",
+    'Corporate': "clean modern office UI, glassmorphism, professional and friendly, soft blue and white shadows."
   };
 
   const modifier = styleModifiers[style] || styleModifiers['3D Render'];
-  const imagePrompt = manualPrompt || `Conceptual technical visualization for AI Analytics infrastructure: ${topicToUse}. ${modifier}. No text.`;
+  const imagePrompt = manualPrompt || `Professional 3D conceptual illustration for: ${topicToUse}. ${modifier}. No text. High resolution.`;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: imagePrompt }] },
+      config: {
+        imageConfig: {
+          aspectRatio: manualAspectRatio as any || "1:1"
+        }
+      }
     });
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -183,6 +174,7 @@ export const generatePostImage = async (data: FormData, style: ImageStyle = '3D 
     }
     return undefined;
   } catch (error: any) {
+    console.error("Image generation failed:", error);
     return undefined; 
   }
 };

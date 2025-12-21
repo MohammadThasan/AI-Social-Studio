@@ -1,6 +1,6 @@
 
 // Tone options for social media generation
-export type Tone = 'Professional' | 'Visionary' | 'Controversial' | 'Educational' | 'Enthusiastic' | 'Skeptical' | 'Architectural';
+export type Tone = 'Professional' | 'Visionary' | 'Controversial' | 'Educational' | 'Enthusiastic' | 'Skeptical' | 'Architectural' | 'Learning';
 
 // Corrected Topic type to include new requested domains
 export type Topic = 
