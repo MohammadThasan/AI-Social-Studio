@@ -304,92 +304,96 @@ const PostResult: React.FC<PostResultProps> = ({ post, isLoading, error, formDat
                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                         <button 
                             onClick={() => setShowVisualStudio(!showVisualStudio)}
-                            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:opacity-70"
+                            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:opacity-70 transition-colors"
                         >
                             <Palette className="w-4 h-4" />
-                            Creative Studio
+                            Customize Visual & Ratio
                             <ChevronDown className={`w-3 h-3 transition-transform ${showVisualStudio ? 'rotate-180' : ''}`} />
                         </button>
                         <div className="flex gap-4">
                           <button 
                             onClick={() => handleRegenerateImage('3D Render')}
                             disabled={isGeneratingImage}
-                            className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 hover:text-indigo-800 disabled:opacity-50 px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/20"
+                            className="text-[10px] font-black text-indigo-600 flex items-center gap-1 hover:text-indigo-800 disabled:opacity-50 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 transition-all uppercase tracking-tight"
                           >
-                            <Cube className="w-3 h-3" /> 3D Magic Render
+                            <Cube className="w-3.5 h-3.5" /> 3D Magic Re-Render
                           </button>
                         </div>
                     </div>
 
                     {showVisualStudio && (
-                        <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-xl space-y-4 border border-slate-200 dark:border-slate-800 animate-in fade-in slide-in-from-top-2">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-tight">Aspect Ratio</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {aspectRatios.map((r) => (
-                                            <button
-                                                key={r.value}
-                                                onClick={() => setSelectedRatio(r.value)}
-                                                className={`p-2 rounded-lg border transition-all ${
-                                                    selectedRatio === r.value 
-                                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
-                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                                                }`}
-                                                title={r.label}
-                                            >
-                                                {r.icon}
-                                            </button>
-                                        ))}
-                                    </div>
+                        <div className="bg-slate-50 dark:bg-slate-850 p-6 rounded-2xl space-y-6 border border-slate-200 dark:border-slate-800 animate-in fade-in slide-in-from-top-4 shadow-inner">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Image Aspect Ratio</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {aspectRatios.map((r) => (
+                                        <button
+                                            key={r.value}
+                                            onClick={() => setSelectedRatio(r.value)}
+                                            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border font-bold text-xs transition-all ${
+                                                selectedRatio === r.value 
+                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20 translate-y-[-2px]' 
+                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-indigo-300'
+                                            }`}
+                                        >
+                                            {r.icon}
+                                            {r.label}
+                                        </button>
+                                    ))}
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-tight">Visual Style</label>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Visual Style Preference</label>
                                     <select 
                                         value={selectedStyle}
                                         onChange={(e) => setSelectedStyle(e.target.value as ImageStyle)}
-                                        className="w-full text-xs font-bold p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none"
+                                        className="w-full text-sm font-bold p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                                     >
                                         {imageStyles.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
+                                <div className="flex items-end">
+                                    <button 
+                                        onClick={() => handleRegenerateImage()}
+                                        disabled={isGeneratingImage}
+                                        className="w-full py-3 bg-slate-900 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 hover:shadow-xl shadow-indigo-500/10 active:scale-[0.98]"
+                                    >
+                                        {isGeneratingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+                                        APPLY STUDIO SETTINGS
+                                    </button>
+                                </div>
                             </div>
-                            <button 
-                                onClick={() => handleRegenerateImage()}
-                                disabled={isGeneratingImage}
-                                className="w-full py-2 bg-slate-900 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                            >
-                                {isGeneratingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
-                                RE-RENDER WITH CURRENT STYLE
-                            </button>
                         </div>
                     )}
 
                     {post.imageUrl ? (
-                        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl transition-transform hover:scale-[1.005] duration-500">
+                        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl transition-transform hover:scale-[1.005] duration-500 bg-slate-100 dark:bg-slate-950">
                             {isGeneratingImage && (
                                 <div className="absolute inset-0 z-10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
                                     <div className="flex flex-col items-center gap-2">
-                                        <RefreshCcw className="w-8 h-8 text-indigo-600 animate-spin" />
-                                        <span className="text-xs font-black uppercase text-indigo-600 tracking-tighter">Rendering Visual...</span>
+                                        <RefreshCcw className="w-10 h-10 text-indigo-600 animate-spin" />
+                                        <span className="text-xs font-black uppercase text-indigo-600 tracking-tighter">Synthesizing Visual...</span>
                                     </div>
                                 </div>
                             )}
-                            <img src={post.imageUrl} alt="AI Analytics visualization" className="w-full h-auto" />
+                            <img src={post.imageUrl} alt="AI Analytics visualization" className="w-full h-auto object-contain max-h-[600px] mx-auto" />
                             <div className="absolute bottom-4 right-4 flex gap-2">
-                                <button onClick={handleDownloadImage} className="p-2 bg-white/90 dark:bg-slate-900/90 rounded-full shadow-lg hover:scale-110 transition-transform">
+                                <button onClick={handleDownloadImage} className="p-2.5 bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-lg hover:scale-110 transition-transform border border-slate-100 dark:border-slate-800">
                                     <Download className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                                 </button>
                             </div>
                         </div>
                     ) : (
-                         <div className="w-full aspect-video bg-slate-100 dark:bg-slate-800 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700">
-                            <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
-                            <span className="text-xs font-bold text-slate-400">Visualization Engine Ready</span>
+                         <div className="w-full aspect-video bg-slate-50 dark:bg-slate-850 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 p-8 text-center">
+                            <ImageIcon className="w-12 h-12 text-slate-300 mb-4" />
+                            <span className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">Visual Engine Ready</span>
+                            <p className="text-xs text-slate-400 mb-6 max-w-xs">Generate a custom visual to complete your technical authority post.</p>
                             <button 
                                 onClick={() => handleRegenerateImage()}
                                 disabled={isGeneratingImage}
-                                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black"
+                                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-500/20"
                             >
                                 Generate Initial Visual
                             </button>
